@@ -18,3 +18,4 @@ Backup/
 # OS
 .DS_Store
 Thumbs.db
+*.html
