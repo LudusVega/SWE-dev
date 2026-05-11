@@ -1295,19 +1295,19 @@ class DashboardWindow(object):
     #             'marker_state': row.marker_state or 'red'
     #         }
     def _store_revision_metadata(self):
-    self.data.setdefault('revision_metadata', {})
-    for row in self.revision_rows:
-        self.data['revision_metadata'][str(row.key)] = {
-            'key': row.key or '',
-            'sequence': row.sequence or '',
-            'number': row.number or '',
-            'date': row.date or '',
-            'pencils_down': row.pencils_down or '',
-            'description': row.description or '',
-            'narrative': row.narrative or '',
-            'sheet_count': row.sheet_count if row.sheet_count is not None else 0,
-            'marker_state': row.marker_state or 'red'
-        }
+        self.data.setdefault('revision_metadata', {})
+        for row in self.revision_rows:
+            self.data['revision_metadata'][str(row.key)] = {
+                'key': row.key or '',
+                'sequence': row.sequence or '',
+                'number': row.number or '',
+                'date': row.date or '',
+                'pencils_down': row.pencils_down or '',
+                'description': row.description or '',
+                'narrative': row.narrative or '',
+                'sheet_count': row.sheet_count if row.sheet_count is not None else 0,
+                'marker_state': row.marker_state or 'red'
+            }
 
     def _store_sheet_revision_status(self):
         self.data.setdefault('sheet_revision_status', {})

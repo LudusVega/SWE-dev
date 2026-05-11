@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>coordination-dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-display: 'Inter', system-ui, sans-serif;
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+      --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+      --space-12: 3rem; --space-16: 4rem;
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #f3f0ec;
+      --color-divider: #dcd9d5;
+      --color-border: #d4d1ca;
+      --color-text: #28251d;
+      --color-text-muted: #6f6d67;
+      --color-text-faint: #9c9a94;
+      --color-text-inverse: #f9f8f4;
+      --color-primary: #124130;
+      --color-primary-hover: #0e3326;
+      --color-primary-highlight: #dbe7df;
+      --color-success: #437a22;
+      --color-warning: #b57417;
+      --color-error: #a13544;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --content-wide: 1380px;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #252320;
+      --color-divider: #2b2926;
+      --color-border: #393836;
+      --color-text: #e5e2db;
+      --color-text-muted: #b1aca1;
+      --color-text-faint: #817d75;
+      --color-text-inverse: #181715;
+      --color-primary: #4f98a3;
+      --color-primary-hover: #66aab4;
+      --color-primary-highlight: #2d3b3d;
+      --color-success: #75b84d;
+      --color-warning: #e1a23f;
+      --color-error: #d9707d;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.22);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.30);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.5;
+      color: var(--color-text);
+      background: var(--color-bg);
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .app {
+      max-width: var(--content-wide);
+      margin: 0 auto;
+      padding: var(--space-4);
+      display: grid;
+      gap: var(--space-4);
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-4);
+      align-items: center;
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-md);
+    }
+    .brand {
+      display: flex;
+      gap: var(--space-4);
+      align-items: flex-start;
+    }
+    .logo {
+      width: 40px; height: 40px; color: var(--color-text-inverse);
+      flex: 0 0 auto;
+    }
+    .title { font-size: var(--text-xl); font-weight: 700; margin: 0; }
+    .meta, .statusline { font-size: var(--text-sm); opacity: 0.92; margin-top: var(--space-1); }
+    .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
+    .btn {
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 0.72rem 0.95rem;
+      background: var(--color-surface);
+      color: var(--color-text);
+      transition: background var(--transition-interactive), border-color var(--transition-interactive), transform var(--transition-interactive);
+      min-height: 44px;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--color-text-inverse); color: var(--color-primary); }
+    .btn-secondary { background: transparent; color: var(--color-text-inverse); border-color: rgba(255,255,255,0.24); }
+    .btn-ghost { background: transparent; border-color: var(--color-border); }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.9fr) minmax(300px, 0.8fr);
+      gap: var(--space-4);
+    }
+    .main, .side { display: grid; gap: var(--space-4); }
+    .panel {
+      background: var(--color-surface);
+      border: 1px solid rgba(40,37,29,0.10);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    [data-theme="dark"] .panel { border-color: rgba(255,255,255,0.08); }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-4) var(--space-3);
+      border-bottom: 1px solid var(--color-divider);
+      background: var(--color-surface-2);
+    }
+    .panel h2 { margin: 0; font-size: var(--text-lg); }
+    .panel-body { padding: var(--space-4); }
+    .toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+    .hint { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .dropzone {
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      background: var(--color-surface-offset);
+      display: grid;
+      gap: var(--space-3);
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+    .metric {
+      padding: var(--space-4);
+      background: var(--color-surface-offset);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(40,37,29,0.08);
+    }
+    .metric-label { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .metric-value { font-size: var(--text-xl); font-weight: 700; margin-top: var(--space-2); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left;
+      padding: 0.7rem 0.65rem;
+      border-bottom: 1px solid var(--color-divider);
+      vertical-align: top;
+      font-size: var(--text-sm);
+    }
+    th { color: var(--color-text-muted); font-weight: 600; background: var(--color-surface-2); position: sticky; top: 0; z-index: 1; }
+    .table-wrap { overflow: auto; max-height: 320px; border-radius: var(--radius-md); }
+    input[type="text"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 0.62rem 0.7rem;
+      min-height: 40px;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    .row-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+    .row-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+    .field { display: grid; gap: var(--space-1); }
+    .field label { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      border-radius: var(--radius-full); padding: 0.3rem 0.65rem;
+      background: var(--color-primary-highlight); color: var(--color-text);
+      font-size: var(--text-xs); font-weight: 600;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 999px; display: inline-block;
+      background: var(--color-error);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+    }
+    .dot.orange { background: var(--color-warning); }
+    .dot.green { background: var(--color-success); }
+    .list {
+      display: grid; gap: var(--space-2);
+      max-height: 420px; overflow: auto;
+    }
+    .revision-item {
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-2);
+      display: grid;
+      gap: 0.35rem;
+    }
+    .revision-item.active { border-color: var(--color-primary); background: var(--color-primary-highlight); }
+    .revision-item button { text-align: left; background: transparent; border: none; padding: 0; }
+    .small { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .footer { background: var(--color-surface-offset); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); color: var(--color-text-muted); }
+    .empty { padding: var(--space-8); text-align: center; color: var(--color-text-muted); background: var(--color-surface-offset); border-radius: var(--radius-lg); }
+    .hidden { display: none !important; }
+    .audit-list { max-height: 220px; overflow: auto; display: grid; gap: var(--space-2); }
+    .audit-item { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-offset); }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .metrics, .row-grid, .row-grid-3 { grid-template-columns: 1fr; }
+      .topbar { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 64 64" fill="none" aria-label="Dashboard logo">
+          <rect x="6" y="6" width="52" height="52" rx="14" stroke="currentColor" stroke-width="4"></rect>
+          <path d="M18 40L28 28L36 34L46 20" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="18" cy="40" r="3" fill="currentColor"></circle>
+          <circle cx="28" cy="28" r="3" fill="currentColor"></circle>
+          <circle cx="36" cy="34" r="3" fill="currentColor"></circle>
+          <circle cx="46" cy="20" r="3" fill="currentColor"></circle>
+        </svg>
+        <div>
+          <h1 class="title">Coordination Dashboard</h1>
+          <div class="meta" id="projectMeta">Open a dashboard JSON file to begin.</div>
+          <div class="statusline" id="statusLine">Standalone companion app for editing dashboard data without Revit.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="themeToggle" type="button" aria-label="Toggle theme">Theme</button>
+        <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+        <button class="btn btn-secondary" id="openBtn" type="button">Open JSON</button>
+        <button class="btn btn-secondary" id="sampleBtn" type="button">Load Sample</button>
+        <button class="btn btn-primary" id="saveBtn" type="button">Save JSON</button>
+        <button class="btn btn-ghost" id="downloadBtn" type="button">Download As</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-body">
+        <div class="dropzone" id="dropzone">
+          <div class="toolbar">
+            <span class="badge">JSON companion editor</span>
+            <span class="hint">Drag and drop a dashboard JSON file here, or open one manually.</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Total sheets</div><div class="metric-value" id="metricTotal">0</div></div>
+            <div class="metric"><div class="metric-label">Complete sheets</div><div class="metric-value" id="metricComplete">0</div></div>
+            <div class="metric"><div class="metric-label">Issued sheets</div><div class="metric-value" id="metricIssued">0</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <main class="main">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Project stages</h2>
+            <div class="toolbar">
+              <button class="btn btn-ghost" id="addStageBtn" type="button">Add stage</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Stage</th><th>Target</th><th>Actual</th><th>Pencils down</th><th>Status</th><th>Owner</th><th>Notes</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="stageTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Revision details</h2>
+            <div class="toolbar"><span class="hint" id="selectedRevisionHint">Select a revision from the list.</span></div>
+          </div>
+          <div class="panel-body">
+            <div id="revisionEditor" class="hidden">
+              <div class="row-grid-3">
+                <div class="field"><label>Sequence</label><input type="text" id="revSequence"></div>
+                <div class="field"><label>Revision</label><input type="text" id="revNumber"></div>
+                <div class="field"><label>Date</label><input type="text" id="revDate"></div>
+              </div>
+              <div class="row-grid">
+                <div class="field"><label>Pencils down</label><input type="text" id="revPencilsDown"></div>
+                <div class="field"><label>Sheets</label><input type="text" id="revSheetCount" disabled></div>
+              </div>
+              <div class="field"><label>Description</label><textarea id="revDescription"></textarea></div>
+              <div class="field"><label>Narrative path</label><input type="text" id="revNarrative"></div>
+            </div>
+            <div id="revisionEmpty" class="empty">No revision selected.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Affected sheets</h2>
+            <div class="toolbar">
+              <button class="btn btn-ghost" id="markAllRevBtn" type="button">Mark revision complete</button>
+              <button class="btn btn-ghost" id="markAllNarrBtn" type="button">Mark narrative complete</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Marker</th><th>Revision complete</th><th>Narrative</th><th>Completed by</th><th>Completed on</th><th>Sheet no.</th><th>Sheet name</th><th>Revision</th><th>Rev date</th>
+                  </tr>
+                </thead>
+                <tbody id="sheetTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="side">
+        <section class="panel">
+          <div class="panel-head"><h2>Revisions</h2></div>
+          <div class="panel-body"><div id="revisionList" class="list"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Discipline status</h2></div>
+          <div class="panel-body">
+            <div class="row-grid">
+              <div class="field"><label>Mechanical %</label><input type="number" id="mPercent"></div>
+              <div class="field"><label>Mechanical issues</label><input type="number" id="mIssues"></div>
+            </div>
+            <div class="field"><label>Mechanical status</label><select id="mStatus"></select></div>
+            <hr style="border:none;border-top:1px solid var(--color-divider);margin:1rem 0;">
+            <div class="row-grid">
+              <div class="field"><label>Electrical %</label><input type="number" id="ePercent"></div>
+              <div class="field"><label>Electrical issues</label><input type="number" id="eIssues"></div>
+            </div>
+            <div class="field"><label>Electrical status</label><select id="eStatus"></select></div>
+            <hr style="border:none;border-top:1px solid var(--color-divider);margin:1rem 0;">
+            <div class="row-grid">
+              <div class="field"><label>Plumbing %</label><input type="number" id="pPercent"></div>
+              <div class="field"><label>Plumbing issues</label><input type="number" id="pIssues"></div>
+            </div>
+            <div class="field"><label>Plumbing status</label><select id="pStatus"></select></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Audit log</h2></div>
+          <div class="panel-body"><div id="auditList" class="audit-list"></div></div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer" id="footerText">No file loaded yet.</div>
+  </div>
+
+  <script>
+    const STATUS_OPTIONS = ['Not Started', 'In Progress', 'On Track', 'Needs Input', 'At Risk', 'Complete'];
+    const DISC_KEYS = ['M', 'E', 'P'];
+    let appData = createDefaultDashboard();
+    let currentFileHandle = null;
+    let currentFileName = 'coordination_dashboard.json';
+    let selectedRevisionKey = null;
+
+    const els = {
+      projectMeta: document.getElementById('projectMeta'),
+      statusLine: document.getElementById('statusLine'),
+      footerText: document.getElementById('footerText'),
+      fileInput: document.getElementById('fileInput'),
+      openBtn: document.getElementById('openBtn'),
+      sampleBtn: document.getElementById('sampleBtn'),
+      saveBtn: document.getElementById('saveBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      themeToggle: document.getElementById('themeToggle'),
+      dropzone: document.getElementById('dropzone'),
+      stageTableBody: document.getElementById('stageTableBody'),
+      revisionList: document.getElementById('revisionList'),
+      sheetTableBody: document.getElementById('sheetTableBody'),
+      auditList: document.getElementById('auditList'),
+      metricTotal: document.getElementById('metricTotal'),
+      metricComplete: document.getElementById('metricComplete'),
+      metricIssued: document.getElementById('metricIssued'),
+      revisionEditor: document.getElementById('revisionEditor'),
+      revisionEmpty: document.getElementById('revisionEmpty'),
+      selectedRevisionHint: document.getElementById('selectedRevisionHint'),
+      revSequence: document.getElementById('revSequence'),
+      revNumber: document.getElementById('revNumber'),
+      revDate: document.getElementById('revDate'),
+      revPencilsDown: document.getElementById('revPencilsDown'),
+      revSheetCount: document.getElementById('revSheetCount'),
+      revDescription: document.getElementById('revDescription'),
+      revNarrative: document.getElementById('revNarrative'),
+      markAllRevBtn: document.getElementById('markAllRevBtn'),
+      markAllNarrBtn: document.getElementById('markAllNarrBtn'),
+      addStageBtn: document.getElementById('addStageBtn'),
+      mPercent: document.getElementById('mPercent'), mIssues: document.getElementById('mIssues'), mStatus: document.getElementById('mStatus'),
+      ePercent: document.getElementById('ePercent'), eIssues: document.getElementById('eIssues'), eStatus: document.getElementById('eStatus'),
+      pPercent: document.getElementById('pPercent'), pIssues: document.getElementById('pIssues'), pStatus: document.getElementById('pStatus'),
+    };
+
+    function createDefaultDashboard() {
+      return {
+        project: { name: 'Standalone Dashboard', number: '', model_path: '', last_updated: new Date().toISOString() },
+        summary: { total_sheets: 0, complete_sheets: 0, issued_sheets: 0 },
+        stages: [
+          { id: 'SD', name: 'Schematic Design', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' },
+          { id: 'DD', name: 'Design Development', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' },
+          { id: '50CD', name: '50% Construction Docs', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' },
+          { id: '90CD', name: '90% Construction Docs', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' },
+          { id: 'PERMIT', name: 'Permit', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' },
+          { id: 'IFC', name: 'Issued For Construction', target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' }
+        ],
+        disciplines: {
+          M: { percent: 0, issues_open: 0, status: 'Not Started' },
+          E: { percent: 0, issues_open: 0, status: 'Not Started' },
+          P: { percent: 0, issues_open: 0, status: 'Not Started' }
+        },
+        revision_metadata: {},
+        sheet_revision_status: {},
+        audit_log: []
+      };
+    }
+
+    function upgradeLegacyStructure(data) {
+      data.revision_metadata = data.revision_metadata || {};
+      data.sheet_revision_status = data.sheet_revision_status || {};
+      data.stages = (data.stages || []).map(stage => Object.assign({ pencils_down: '', notes: '', owner: '', status: 'Not Started', target_date: '', actual_date: '' }, stage));
+      Object.keys(data.revision_metadata).forEach(key => {
+        data.revision_metadata[key].narrative = data.revision_metadata[key].narrative || '';
+        data.revision_metadata[key].pencils_down = data.revision_metadata[key].pencils_down || '';
+      });
+      const status = data.sheet_revision_status;
+      const keys = Object.keys(status);
+      if (!keys.length) return data;
+      const sample = status[keys[0]];
+      if (typeof sample === 'boolean') {
+        const upgraded = { legacy: {} };
+        Object.entries(status).forEach(([sheetNumber, payload]) => {
+          upgraded.legacy[sheetNumber] = { complete: !!payload, narrative_complete: false, completed_by: '', completed_on: '' };
+        });
+        data.sheet_revision_status = upgraded;
+        return data;
+      }
+      if (sample && typeof sample === 'object') {
+        const nestedValues = Object.values(sample);
+        const nested = nestedValues.length ? nestedValues[0] : null;
+        if (nested && typeof nested === 'object' && 'complete' in nested) {
+          Object.values(status).forEach(sheetMap => {
+            Object.values(sheetMap).forEach(payload => {
+              payload.narrative_complete = !!(payload.narrative_complete ?? payload.narrative);
+              payload.completed_by = payload.completed_by || '';
+              payload.completed_on = payload.completed_on || '';
+            });
+          });
+          return data;
+        }
+        if ('complete' in sample || 'completed_by' in sample) {
+          const upgraded = { legacy: {} };
+          Object.entries(status).forEach(([sheetNumber, payload]) => {
+            upgraded.legacy[sheetNumber] = {
+              complete: !!payload.complete,
+              narrative_complete: !!(payload.narrative_complete ?? payload.narrative),
+              completed_by: payload.completed_by || '',
+              completed_on: payload.completed_on || ''
+            };
+          });
+          data.sheet_revision_status = upgraded;
+        }
+      }
+      return data;
+    }
+
+    function addAudit(message) {
+      appData.audit_log = appData.audit_log || [];
+      appData.audit_log.unshift({ timestamp: new Date().toISOString(), user: 'browser-user', action: message });
+      appData.audit_log = appData.audit_log.slice(0, 50);
+    }
+
+    function safe(value, fallback='') { return value == null ? fallback : value; }
+    function escapeHtml(str) { return String(safe(str)).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    function getStatus(revKey, sheetNumber) { return (((appData.sheet_revision_status || {})[String(revKey)] || {})[sheetNumber]) || {}; }
+    function sheetMarker(sheet) { return sheet.revisions_complete && sheet.narrative_complete ? 'green' : (sheet.revisions_complete || sheet.narrative_complete ? 'orange' : 'red'); }
+    function computeRevisionMarker(sheets) {
+      if (!sheets.length) return 'red';
+      const greens = sheets.filter(s => sheetMarker(s) === 'green').length;
+      if (greens === sheets.length) return 'green';
+      if (greens > 0) return 'orange';
+      return 'red';
+    }
+
+    function collectRevisionRows() {
+      const metadata = appData.revision_metadata || {};
+      const statusRoot = appData.sheet_revision_status || {};
+      const keys = new Set([...Object.keys(metadata), ...Object.keys(statusRoot)]);
+      const rows = [...keys].map(key => {
+        const revMeta = metadata[key] || {};
+        const sheetMap = statusRoot[key] || {};
+        const sheets = Object.entries(sheetMap).map(([sheetNumber, payload]) => ({
+          revision_key: key,
+          sheet_number: sheetNumber,
+          sheet_name: payload.sheet_name || '',
+          current_revision: revMeta.number || '',
+          current_revision_date: revMeta.date || '',
+          revisions_complete: !!payload.complete,
+          narrative_complete: !!payload.narrative_complete,
+          completed_by: payload.completed_by || '',
+          completed_on: payload.completed_on || ''
+        })).sort((a,b) => a.sheet_number.localeCompare(b.sheet_number));
+        return {
+          key,
+          sequence: safe(revMeta.sequence),
+          number: safe(revMeta.number),
+          date: safe(revMeta.date),
+          pencils_down: safe(revMeta.pencils_down),
+          description: safe(revMeta.description),
+          narrative: safe(revMeta.narrative),
+          sheet_count: sheets.length,
+          marker_state: computeRevisionMarker(sheets),
+          sheets
+        };
+      });
+      rows.sort((a,b) => String(a.sequence).localeCompare(String(b.sequence), undefined, {numeric:true, sensitivity:'base'}));
+      return rows;
+    }
+
+    function ensureDisciplineInputs() {
+      ['mStatus','eStatus','pStatus'].forEach(id => {
+        const sel = els[id];
+        if (!sel.options.length) {
+          STATUS_OPTIONS.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt; o.textContent = opt; sel.appendChild(o);
+          });
+        }
+      });
+    }
+
+    function renderStages() {
+      const rows = appData.stages || [];
+      els.stageTableBody.innerHTML = rows.map((stage, i) => `
+        <tr>
+          <td><input type="text" data-stage="${i}" data-field="id" value="${escapeHtml(stage.id || '')}"></td>
+          <td><input type="text" data-stage="${i}" data-field="name" value="${escapeHtml(stage.name || '')}"></td>
+          <td><input type="text" data-stage="${i}" data-field="target_date" value="${escapeHtml(stage.target_date || '')}"></td>
+          <td><input type="text" data-stage="${i}" data-field="actual_date" value="${escapeHtml(stage.actual_date || '')}"></td>
+          <td><input type="text" data-stage="${i}" data-field="pencils_down" value="${escapeHtml(stage.pencils_down || '')}"></td>
+          <td>
+            <select data-stage="${i}" data-field="status">
+              ${STATUS_OPTIONS.map(opt => `<option value="${escapeHtml(opt)}" ${stage.status===opt?'selected':''}>${escapeHtml(opt)}</option>`).join('')}
+            </select>
+          </td>
+          <td><input type="text" data-stage="${i}" data-field="owner" value="${escapeHtml(stage.owner || '')}"></td>
+          <td><input type="text" data-stage="${i}" data-field="notes" value="${escapeHtml(stage.notes || '')}"></td>
+          <td><button class="btn btn-ghost" data-remove-stage="${i}" type="button">Delete</button></td>
+        </tr>`).join('');
+    }
+
+    function renderRevisionList() {
+      const revisions = collectRevisionRows();
+      if (!revisions.length) {
+        els.revisionList.innerHTML = '<div class="empty">No revisions found in this JSON yet.</div>';
+        return;
+      }
+      if (!selectedRevisionKey || !revisions.find(r => r.key === selectedRevisionKey)) selectedRevisionKey = revisions[0].key;
+      els.revisionList.innerHTML = revisions.map(rev => `
+        <div class="revision-item ${rev.key===selectedRevisionKey?'active':''}">
+          <button type="button" data-revision-key="${escapeHtml(rev.key)}">
+            <div class="badge"><span class="dot ${rev.marker_state}"></span> ${escapeHtml(rev.number || rev.sequence || rev.key)}</div>
+            <div style="margin-top:0.45rem;font-weight:600;">${escapeHtml(rev.description || 'No description')}</div>
+            <div class="small">Date: ${escapeHtml(rev.date || '')} · Sheets: ${rev.sheet_count}</div>
+          </button>
+        </div>`).join('');
+      renderRevisionEditor(revisions.find(r => r.key === selectedRevisionKey) || null);
+    }
+
+    function renderRevisionEditor(rev) {
+      if (!rev) {
+        els.revisionEditor.classList.add('hidden');
+        els.revisionEmpty.classList.remove('hidden');
+        els.selectedRevisionHint.textContent = 'Select a revision from the list.';
+        renderSheetTable([]);
+        return;
+      }
+      const meta = (appData.revision_metadata || {})[rev.key] || {};
+      els.revisionEditor.classList.remove('hidden');
+      els.revisionEmpty.classList.add('hidden');
+      els.selectedRevisionHint.textContent = `Editing revision ${rev.number || rev.sequence || rev.key}`;
+      els.revSequence.value = safe(meta.sequence, rev.sequence);
+      els.revNumber.value = safe(meta.number, rev.number);
+      els.revDate.value = safe(meta.date, rev.date);
+      els.revPencilsDown.value = safe(meta.pencils_down, rev.pencils_down);
+      els.revDescription.value = safe(meta.description, rev.description);
+      els.revNarrative.value = safe(meta.narrative, rev.narrative);
+      els.revSheetCount.value = rev.sheet_count;
+      renderSheetTable(rev.sheets, rev.key);
+    }
+
+    function renderSheetTable(sheets, revKey = null) {
+      if (!sheets.length) {
+        els.sheetTableBody.innerHTML = '<tr><td colspan="9"><div class="empty">No sheet status entries for this revision.</div></td></tr>';
+        return;
+      }
+      els.sheetTableBody.innerHTML = sheets.map((sheet, idx) => `
+        <tr>
+          <td><span class="dot ${sheetMarker(sheet)}"></span></td>
+          <td><input type="checkbox" data-sheet-rev="${escapeHtml(revKey)}" data-sheet="${idx}" data-field="revisions_complete" ${sheet.revisions_complete ? 'checked' : ''}></td>
+          <td><input type="checkbox" data-sheet-rev="${escapeHtml(revKey)}" data-sheet="${idx}" data-field="narrative_complete" ${sheet.narrative_complete ? 'checked' : ''}></td>
+          <td><input type="text" data-sheet-rev="${escapeHtml(revKey)}" data-sheet="${idx}" data-field="completed_by" value="${escapeHtml(sheet.completed_by || '')}"></td>
+          <td><input type="text" data-sheet-rev="${escapeHtml(revKey)}" data-sheet="${idx}" data-field="completed_on" value="${escapeHtml(sheet.completed_on || '')}"></td>
+          <td>${escapeHtml(sheet.sheet_number || '')}</td>
+          <td>${escapeHtml(sheet.sheet_name || '')}</td>
+          <td>${escapeHtml(sheet.current_revision || '')}</td>
+          <td>${escapeHtml(sheet.current_revision_date || '')}</td>
+        </tr>`).join('');
+    }
+
+    function renderDisciplines() {
+      const d = appData.disciplines || {};
+      els.mPercent.value = safe(d.M?.percent, 0); els.mIssues.value = safe(d.M?.issues_open, 0); els.mStatus.value = safe(d.M?.status, 'Not Started');
+      els.ePercent.value = safe(d.E?.percent, 0); els.eIssues.value = safe(d.E?.issues_open, 0); els.eStatus.value = safe(d.E?.status, 'Not Started');
+      els.pPercent.value = safe(d.P?.percent, 0); els.pIssues.value = safe(d.P?.issues_open, 0); els.pStatus.value = safe(d.P?.status, 'Not Started');
+    }
+
+    function renderAudit() {
+      const items = appData.audit_log || [];
+      els.auditList.innerHTML = items.length ? items.map(item => `
+        <div class="audit-item">
+          <div style="font-weight:600;">${escapeHtml(item.action || '')}</div>
+          <div class="small">${escapeHtml(item.user || '')} · ${escapeHtml(item.timestamp || '')}</div>
+        </div>`).join('') : '<div class="empty">No audit entries yet.</div>';
+    }
+
+    function updateSummaryUI() {
+      const summary = appData.summary || {};
+      els.metricTotal.textContent = summary.total_sheets || 0;
+      els.metricComplete.textContent = summary.complete_sheets || 0;
+      els.metricIssued.textContent = summary.issued_sheets || 0;
+      els.projectMeta.textContent = `Project No: ${safe(appData.project?.number)}   |   Updated: ${safe(appData.project?.last_updated)}`;
+      els.footerText.textContent = `${currentFileName} · ${collectRevisionRows().length} revisions · ${(appData.stages || []).length} stages`;
+    }
+
+    function renderAll() {
+      ensureDisciplineInputs();
+      renderStages();
+      renderRevisionList();
+      renderDisciplines();
+      renderAudit();
+      updateSummaryUI();
+    }
+
+    function updateRevisionMetadataFromEditor() {
+      if (!selectedRevisionKey) return;
+      appData.revision_metadata = appData.revision_metadata || {};
+      appData.revision_metadata[selectedRevisionKey] = appData.revision_metadata[selectedRevisionKey] || {};
+      Object.assign(appData.revision_metadata[selectedRevisionKey], {
+        sequence: els.revSequence.value,
+        number: els.revNumber.value,
+        date: els.revDate.value,
+        pencils_down: els.revPencilsDown.value,
+        description: els.revDescription.value,
+        narrative: els.revNarrative.value
+      });
+      appData.project.last_updated = new Date().toISOString();
+    }
+
+    function updateDisciplinesFromInputs() {
+      appData.disciplines = appData.disciplines || {};
+      appData.disciplines.M = { percent: Number(els.mPercent.value || 0), issues_open: Number(els.mIssues.value || 0), status: els.mStatus.value || 'Not Started' };
+      appData.disciplines.E = { percent: Number(els.ePercent.value || 0), issues_open: Number(els.eIssues.value || 0), status: els.eStatus.value || 'Not Started' };
+      appData.disciplines.P = { percent: Number(els.pPercent.value || 0), issues_open: Number(els.pIssues.value || 0), status: els.pStatus.value || 'Not Started' };
+      appData.project.last_updated = new Date().toISOString();
+    }
+
+    function parseAndLoad(content, fileName = 'dashboard.json') {
+      const parsed = upgradeLegacyStructure(JSON.parse(content));
+      appData = Object.assign(createDefaultDashboard(), parsed);
+      currentFileName = fileName;
+      currentFileHandle = null;
+      selectedRevisionKey = null;
+      setStatus('Loaded JSON file.');
+      renderAll();
+    }
+
+    async function openWithPicker() {
+      if ('showOpenFilePicker' in window) {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+        });
+        const file = await handle.getFile();
+        currentFileHandle = handle;
+        parseAndLoad(await file.text(), file.name);
+      } else {
+        els.fileInput.click();
+      }
+    }
+
+    async function saveToHandle() {
+      updateRevisionMetadataFromEditor();
+      updateDisciplinesFromInputs();
+      addAudit('Saved dashboard from companion app');
+      appData.project.last_updated = new Date().toISOString();
+      const content = JSON.stringify(appData, null, 2);
+      if (currentFileHandle && 'createWritable' in currentFileHandle) {
+        const writable = await currentFileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        setStatus('Saved back to the opened JSON file.');
+        renderAudit();
+        updateSummaryUI();
+        return true;
+      }
+      return false;
+    }
+
+    function downloadJson() {
+      updateRevisionMetadataFromEditor();
+      updateDisciplinesFromInputs();
+      addAudit('Downloaded dashboard JSON from companion app');
+      appData.project.last_updated = new Date().toISOString();
+      const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = currentFileName || 'coordination_dashboard.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      renderAudit();
+      updateSummaryUI();
+      setStatus('Downloaded updated JSON file.');
+    }
+
+    function setStatus(message) {
+      els.statusLine.textContent = message;
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    function loadSample() {
+      appData = createDefaultDashboard();
+      appData.project = { name: 'Sample Project Dashboard', number: '12345', model_path: '', last_updated: new Date().toISOString() };
+      appData.summary = { total_sheets: 42, complete_sheets: 18, issued_sheets: 11 };
+      appData.disciplines = {
+        M: { percent: 65, issues_open: 7, status: 'In Progress' },
+        E: { percent: 48, issues_open: 12, status: 'Needs Input' },
+        P: { percent: 73, issues_open: 3, status: 'On Track' }
+      };
+      appData.revision_metadata = {
+        '1001': { sequence: '1', number: 'A', date: '2026-05-01', pencils_down: '2026-04-28', description: 'Permit issue', narrative: '\\server\\project\\permit_narrative.docx' },
+        '1002': { sequence: '2', number: 'B', date: '2026-05-09', pencils_down: '2026-05-06', description: 'Coordination update', narrative: '\\server\\project\\coordination_narrative.docx' }
+      };
+      appData.sheet_revision_status = {
+        '1001': {
+          'M101': { complete: true, narrative_complete: true, completed_by: 'ELutz', completed_on: '2026-05-01T10:00:00', sheet_name: 'Mechanical Floor Plan Level 1' },
+          'P201': { complete: true, narrative_complete: false, completed_by: 'ELutz', completed_on: '2026-05-01T10:05:00', sheet_name: 'Plumbing Riser Diagram' }
+        },
+        '1002': {
+          'E301': { complete: false, narrative_complete: false, completed_by: '', completed_on: '', sheet_name: 'Electrical Power Plan' },
+          'M401': { complete: true, narrative_complete: false, completed_by: 'ELutz', completed_on: '2026-05-09T14:10:00', sheet_name: 'Mechanical Roof Plan' }
+        }
+      };
+      addAudit('Loaded sample data');
+      currentFileName = 'sample_dashboard.json';
+      selectedRevisionKey = null;
+      renderAll();
+      setStatus('Loaded sample dashboard data.');
+    }
+
+    els.openBtn.addEventListener('click', () => openWithPicker().catch(err => setStatus(`Open failed: ${err.message}`)));
+    els.fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      parseAndLoad(await file.text(), file.name);
+    });
+    els.sampleBtn.addEventListener('click', loadSample);
+    els.themeToggle.addEventListener('click', toggleTheme);
+    els.saveBtn.addEventListener('click', async () => {
+      const saved = await saveToHandle().catch(err => { setStatus(`Save failed: ${err.message}`); return false; });
+      if (!saved) downloadJson();
+    });
+    els.downloadBtn.addEventListener('click', downloadJson);
+    els.addStageBtn.addEventListener('click', () => {
+      const next = (appData.stages || []).length + 1;
+      appData.stages.push({ id: `CUSTOM${next}`, name: `New Stage ${next}`, target_date: '', actual_date: '', pencils_down: '', status: 'Not Started', owner: '', notes: '' });
+      addAudit('Added a project stage');
+      renderStages(); renderAudit(); updateSummaryUI(); setStatus('Added a new stage.');
+    });
+
+    document.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t.matches('[data-stage]')) {
+        const idx = Number(t.dataset.stage); const field = t.dataset.field;
+        appData.stages[idx][field] = t.value;
+        appData.project.last_updated = new Date().toISOString();
+        updateSummaryUI();
+      }
+      if ([els.revSequence, els.revNumber, els.revDate, els.revPencilsDown, els.revDescription, els.revNarrative].includes(t)) {
+        updateRevisionMetadataFromEditor();
+        renderRevisionList();
+      }
+      if ([els.mPercent, els.mIssues, els.ePercent, els.eIssues, els.pPercent, els.pIssues].includes(t)) {
+        updateDisciplinesFromInputs();
+      }
+      if (t.matches('[data-sheet-rev][data-field="completed_by"], [data-sheet-rev][data-field="completed_on"]')) {
+        const revKey = t.dataset.sheetRev; const idx = Number(t.dataset.sheet);
+        const revisions = collectRevisionRows(); const rev = revisions.find(r => r.key === revKey); if (!rev) return;
+        const sheet = rev.sheets[idx]; if (!sheet) return;
+        const sheetNumber = sheet.sheet_number;
+        appData.sheet_revision_status[revKey] = appData.sheet_revision_status[revKey] || {};
+        appData.sheet_revision_status[revKey][sheetNumber] = appData.sheet_revision_status[revKey][sheetNumber] || {};
+        appData.sheet_revision_status[revKey][sheetNumber][t.dataset.field] = t.value;
+        appData.project.last_updated = new Date().toISOString();
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t.matches('select[data-stage]')) {
+        const idx = Number(t.dataset.stage); appData.stages[idx][t.dataset.field] = t.value; appData.project.last_updated = new Date().toISOString();
+      }
+      if ([els.mStatus, els.eStatus, els.pStatus].includes(t)) updateDisciplinesFromInputs();
+      if (t.matches('[data-sheet-rev][data-field="revisions_complete"], [data-sheet-rev][data-field="narrative_complete"]')) {
+        const revKey = t.dataset.sheetRev; const idx = Number(t.dataset.sheet); const field = t.dataset.field;
+        const revisions = collectRevisionRows(); const rev = revisions.find(r => r.key === revKey); if (!rev) return;
+        const sheet = rev.sheets[idx]; if (!sheet) return;
+        const sheetNumber = sheet.sheet_number;
+        appData.sheet_revision_status[revKey] = appData.sheet_revision_status[revKey] || {};
+        appData.sheet_revision_status[revKey][sheetNumber] = appData.sheet_revision_status[revKey][sheetNumber] || {};
+        appData.sheet_revision_status[revKey][sheetNumber][field === 'revisions_complete' ? 'complete' : 'narrative_complete'] = t.checked;
+        if (field === 'revisions_complete' && t.checked) {
+          appData.sheet_revision_status[revKey][sheetNumber].completed_by = appData.sheet_revision_status[revKey][sheetNumber].completed_by || 'browser-user';
+          appData.sheet_revision_status[revKey][sheetNumber].completed_on = appData.sheet_revision_status[revKey][sheetNumber].completed_on || new Date().toISOString();
+        }
+        if (field === 'revisions_complete' && !t.checked) {
+          appData.sheet_revision_status[revKey][sheetNumber].completed_by = '';
+          appData.sheet_revision_status[revKey][sheetNumber].completed_on = '';
+        }
+        appData.project.last_updated = new Date().toISOString();
+        renderRevisionList();
+        updateSummaryUI();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const revButton = e.target.closest('[data-revision-key]');
+      if (revButton) {
+        selectedRevisionKey = revButton.dataset.revisionKey;
+        renderRevisionList();
+        return;
+      }
+      const removeStageBtn = e.target.closest('[data-remove-stage]');
+      if (removeStageBtn) {
+        const idx = Number(removeStageBtn.dataset.removeStage);
+        appData.stages.splice(idx, 1);
+        addAudit('Removed a project stage');
+        renderStages(); renderAudit(); updateSummaryUI();
+      }
+    });
+
+    els.markAllRevBtn.addEventListener('click', () => {
+      if (!selectedRevisionKey) return;
+      const map = appData.sheet_revision_status[selectedRevisionKey] || {};
+      Object.values(map).forEach(payload => {
+        payload.complete = true; payload.completed_by = payload.completed_by || 'browser-user'; payload.completed_on = payload.completed_on || new Date().toISOString();
+      });
+      addAudit('Marked all sheets revision-complete for selected revision');
+      renderRevisionList(); renderAudit(); updateSummaryUI();
+    });
+
+    els.markAllNarrBtn.addEventListener('click', () => {
+      if (!selectedRevisionKey) return;
+      const map = appData.sheet_revision_status[selectedRevisionKey] || {};
+      Object.values(map).forEach(payload => { payload.narrative_complete = true; });
+      addAudit('Marked all sheets narrative-complete for selected revision');
+      renderRevisionList(); renderAudit(); updateSummaryUI();
+    });
+
+    ['dragenter','dragover'].forEach(evt => els.dropzone.addEventListener(evt, e => { e.preventDefault(); els.dropzone.style.borderColor = 'var(--color-primary)'; }));
+    ['dragleave','drop'].forEach(evt => els.dropzone.addEventListener(evt, e => { e.preventDefault(); els.dropzone.style.borderColor = 'var(--color-border)'; }));
+    els.dropzone.addEventListener('drop', async e => {
+      const file = [...e.dataTransfer.files].find(f => f.name.toLowerCase().endsWith('.json'));
+      if (!file) return setStatus('Drop a JSON file.');
+      parseAndLoad(await file.text(), file.name);
+    });
+
+    ensureDisciplineInputs();
+    renderAll();
+  </script>
+</body>
+</html>
