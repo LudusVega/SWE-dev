@@ -162,6 +162,15 @@ def _current_username():
 def _current_timestamp():
     return datetime.datetime.now().isoformat(timespec='seconds')
 
+def _pick_dashboard_folder(prompt):
+    selected_folder = forms.pick_folder(title=prompt)
+    if not selected_folder:
+        forms.alert(
+            'No folder was selected. Dashboard launch cancelled.',
+            exitscript=True
+        )
+    return selected_folder
+
 
 def _get_project_number_from_info(doc):
     try:
@@ -185,18 +194,15 @@ def _get_project_folder_from_project_info(doc):
     swe_project_number = _get_project_number_from_info(doc)
 
     if not swe_project_number:
-        forms.alert(
-            'SWE Project Number must be included in Project Information '
-            'for this dashboard to save to the project folder.',
-            exitscript=True
+        return _pick_dashboard_folder(
+            'Select folder for Coordination Dashboard files'
         )
 
     project_root = os.path.join(base_path, swe_project_number)
 
     if not os.path.exists(project_root):
-        forms.alert(
-            'Project root folder does not exist:\n{}'.format(project_root),
-            exitscript=True
+        return _pick_dashboard_folder(
+            'Project folder not found. Select folder for Coordination Dashboard files'
         )
 
     cad_matches = [
@@ -205,9 +211,8 @@ def _get_project_folder_from_project_info(doc):
     ]
 
     if not cad_matches:
-        forms.alert(
-            "Could not find a folder matching '10 CAD*' under:\n{}".format(project_root),
-            exitscript=True
+        return _pick_dashboard_folder(
+            "Could not find '10 CAD*'. Select folder for Coordination Dashboard files"
         )
 
     cad_matches.sort()
