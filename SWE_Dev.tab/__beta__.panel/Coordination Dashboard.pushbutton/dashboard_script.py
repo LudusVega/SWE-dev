@@ -1,15 +1,4 @@
 # -*- coding: utf-8 -*-
-
-__title__ = 'Dashboard'
-__author__ = 'Evelyn Lutz'
-__doc__ = """
-Project stage coordination dashboard with revision-level and 
-sheet-level marker colors, revision-specific completion tracking, 
-narrative tracking, completed-by users, completed timestamps, 
-pencils down fields, narrative file paths, browse/open narrative buttons, 
-revision highlighting, and inline add-stage support.
-"""
-
 from __future__ import print_function
 
 import os
@@ -51,6 +40,16 @@ if lib_dir not in sys.path:
     sys.path.insert(0, lib_dir)
 
 import project_paths
+
+__title__ = 'Dashboard'
+__author__ = 'Evelyn Lutz'
+__doc__ = """
+Project stage coordination dashboard with revision-level and 
+sheet-level marker colors, revision-specific completion tracking, 
+narrative tracking, completed-by users, completed timestamps, 
+pencils down fields, narrative file paths, browse/open narrative buttons, 
+revision highlighting, and inline add-stage support.
+"""
 
 DOC = revit.doc
 json_path = project_paths.get_dashboard_json_path(doc)
