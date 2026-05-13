@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+
+__title__ = 'Dashboard'
+__author__ = 'Evelyn Lutz'
+__doc__ = """
+Project stage coordination dashboard with revision-level and 
+sheet-level marker colors, revision-specific completion tracking, 
+narrative tracking, completed-by users, completed timestamps, 
+pencils down fields, narrative file paths, browse/open narrative buttons, 
+revision highlighting, and inline add-stage support.
+"""
+
 from __future__ import print_function
 
 import os
@@ -30,20 +41,16 @@ from System.Collections.ObjectModel import ObservableCollection
 from Autodesk.Revit.DB import FilteredElementCollector, ViewSheet
 from pyrevit import revit, forms
 
-lib_path = os.path.join(os.path.dirname(__file__), "..", "lib")
-sys.path.append(os.path.abspath(lib_path))
+script_dir = os.path.dirname(EXEC_PARAMS.command_path)
+extension_root = os.path.abspath(
+    os.path.join(script_dir, "..", "..", "..")
+)
+lib_dir = os.path.join(extension_root, "lib")
 
-from lib import project_paths
+if lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
 
-__title__ = 'Dashboard'
-__author__ = 'Evelyn Lutz'
-__doc__ = """
-Project stage coordination dashboard with revision-level and 
-sheet-level marker colors, revision-specific completion tracking, 
-narrative tracking, completed-by users, completed timestamps, 
-pencils down fields, narrative file paths, browse/open narrative buttons, 
-revision highlighting, and inline add-stage support.
-"""
+import project_paths
 
 DOC = revit.doc
 json_path = project_paths.get_dashboard_json_path(doc)
