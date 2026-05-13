@@ -858,6 +858,8 @@ class MainViewModel(BaseViewModel):
         self._active_count_text    = '(0 to add)'
         self._selected_family_item = None
         self._selected_category    = '(All Categories)'
+        self._result_details_text = ''
+
 
         # Connector type list + initial selection
         self._connector_types = self._build_connector_type_options()
@@ -907,6 +909,7 @@ class MainViewModel(BaseViewModel):
         return result
 
     def _load_sp_file(self):
+        #sp_file = get_project_shared_parameter_file(self.app)
         sp_file = get_project_shared_parameter_file(self.app, prompt_user=False)
         if sp_file:
             self._sp_group_dict, self._sp_param_dict = read_txt_file_combined(sp_file)
@@ -948,6 +951,14 @@ class MainViewModel(BaseViewModel):
     @property
     def ResultText(self):
         return self._result_text
+
+    @property
+    def ResultDetailsText(self):
+        return self._result_details_text
+
+    @property
+    def HasResultDetails(self):
+        return bool(self._result_details_text)
 
     @property
     def ResultBrush(self):
@@ -1089,10 +1100,12 @@ class MainViewModel(BaseViewModel):
             self._active_count_text = '({0} to add)'.format(active)
         self._notify('ActiveCountText')
 
-    def _set_result(self, text, is_error=False):
-        self._result_text     = text
+    def _set_result(self, text, is_error=False, details=''):
+        self._result_text = text or ''
+        self._result_details_text = details or ''
         self._result_is_error = bool(is_error)
-        self._notify('ResultText', 'ResultBrush', 'ResultVisible')
+        self._notify('ResultText', 'ResultDetailsText', 'HasResultDetails',
+                     'ResultBrush', 'ResultVisible')
 
     def _get_family_param_names_cached(self, family_elem):
         fam_id = family_elem.Id.IntegerValue
@@ -1370,26 +1383,26 @@ class MainViewModel(BaseViewModel):
         is_err = bool(failed)
         self._set_result(' | '.join(p for p in summary_parts if p), is_error=is_err)
 
-        # Detailed dialog only on failure or significant changes.
-        lines = []
+        summary_parts = []
         if added:
-            lines.append('PARAMETERS ADDED ({0}):'.format(len(added)))
-            lines += ['  + ' + n for n in added]
-        if failed:
-            lines.append('\nFAILED ({0}):'.format(len(failed)))
-            lines += ['  x ' + n for n in failed]
-        if not_found:
-            lines.append('\nNOT IN SP FILE ({0}):'.format(len(not_found)))
-            lines += ['  ? ' + n for n in not_found]
-        if assoc_results:
-            lines.append('\nASSOCIATIONS ({0}):'.format(len(assoc_results)))
-            lines += ['  -> ' + n for n in assoc_results]
-        lines.append('\nCONNECTOR: ' + conn_msg + ' ({0})'.format(conn_label))
+            summary_parts.append('Added {0} parameter{1}'.format(
+                len(added), '' if len(added) == 1 else 's'))
+        else:
+            summary_parts.append('Added 0 parameters')
 
-        TaskDialog.Show(
-            u'Complete \u2014 {0}'.format(family_name),
-            '\n'.join(lines) if lines else 'No changes were required.',
-        )
+        if failed:
+            summary_parts.append('Failed {0}'.format(len(failed)))
+
+        if not_found:
+            summary_parts.append('Not in SP file: {0}'.format(len(not_found)))
+
+        if assoc_results:
+            summary_parts.append('Associated {0}'.format(len(assoc_results)))
+
+        summary_parts.append('Connector: {0} ({1})'.format(conn_msg, conn_label))
+
+        is_err = bool(failed)
+        self._set_result(' | '.join(summary_parts), is_error=is_err)
 
 
 # ==================== VIEW ====================
@@ -1480,7 +1493,6 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
         <SolidColorBrush x:Key="MediumGrayBrush" Color="#E0E0E0"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- ===== buttons / inputs (carried from v1.3) ===== -->
         <Style x:Key="PrimaryFlatButton" TargetType="Button">
             <Setter Property="Background"      Value="White"/>
             <Setter Property="Foreground"      Value="{StaticResource ForestBrush}"/>
@@ -1528,6 +1540,7 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
             <Setter Property="BorderThickness"            Value="0,0,1,0"/>
             <Setter Property="Cursor"                     Value="Arrow"/>
         </Style>
+
         <Style x:Key="ColHeaderCenter" TargetType="DataGridColumnHeader" BasedOn="{StaticResource ColHeader}">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
@@ -1538,6 +1551,7 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
             <Setter Property="FontSize"          Value="12"/>
             <Setter Property="TextTrimming"      Value="CharacterEllipsis"/>
         </Style>
+
         <Style x:Key="CellTextMuted" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
             <Setter Property="Foreground" Value="#6B7280"/>
             <Setter Property="FontSize"   Value="11"/>
@@ -1591,13 +1605,17 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
 
         <ControlTemplate x:Key="ToggleSwitchTemplate" TargetType="ToggleButton">
             <Grid Width="46" Height="24">
-                <Border x:Name="Track" CornerRadius="12"
+                <Border x:Name="Track"
+                        CornerRadius="12"
                         Background="{StaticResource MediumGrayBrush}"
                         BorderBrush="{StaticResource MediumGrayBrush}"
                         BorderThickness="1"/>
-                <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="White"
+                <Ellipse x:Name="Thumb"
+                         Width="18" Height="18"
+                         Fill="White"
                          HorizontalAlignment="Left"
-                         Margin="3,0,0,0" VerticalAlignment="Center"/>
+                         Margin="3,0,0,0"
+                         VerticalAlignment="Center"/>
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsChecked" Value="True">
@@ -1622,19 +1640,22 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Title bar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal"
-                    HorizontalAlignment="Center" Margin="0,0,0,10">
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,10">
             <TextBlock Text="Add Electrical Parameters + Connector"
-                       FontSize="16" FontWeight="Bold"
+                       FontSize="16"
+                       FontWeight="Bold"
                        Foreground="{StaticResource ForestBrush}"/>
             <TextBlock Text="{Binding StatusText}"
-                       FontSize="11" FontStyle="Italic"
+                       FontSize="11"
+                       FontStyle="Italic"
                        Foreground="{StaticResource MediumGrayBrush}"
-                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"/>
         </StackPanel>
 
-        <!-- Main two-column layout -->
         <Grid Grid.Row="1" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="240"/>
@@ -1642,8 +1663,9 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ============ LEFT: LOADED FAMILIES ============ -->
-            <Border Grid.Column="0" BorderBrush="{StaticResource ForestBrush}" BorderThickness="2">
+            <Border Grid.Column="0"
+                    BorderBrush="{StaticResource ForestBrush}"
+                    BorderThickness="2">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="40"/>
@@ -1651,34 +1673,46 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="{StaticResource ForestBrush}" Padding="10">
+                    <Border Grid.Row="0"
+                            Background="{StaticResource ForestBrush}"
+                            Padding="10">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="LOADED FAMILIES" Foreground="White"
-                                       FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="LOADED FAMILIES"
+                                       Foreground="White"
+                                       FontWeight="Bold"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding FamilyCountText}"
-                                       Foreground="White" FontSize="11"
-                                       VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                       Foreground="White"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0,0,0"/>
                         </StackPanel>
                     </Border>
 
-                    <ComboBox Grid.Row="1" x:Name="cmb_family_category"
+                    <ComboBox Grid.Row="1"
+                              x:Name="cmb_family_category"
                               Style="{StaticResource FlatComboBox}"
                               Margin="6,6,6,4"
                               SelectionChanged="family_category_changed"/>
 
-                    <ListBox Grid.Row="2" x:Name="family_list"
+                    <ListBox Grid.Row="2"
+                             x:Name="family_list"
                              ItemsSource="{Binding FamilyItems}"
-                             Background="White" BorderThickness="0"
-                             Padding="4" Margin="0"
+                             Background="White"
+                             BorderThickness="0"
+                             Padding="4"
+                             Margin="0"
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling"
                              SelectionChanged="family_selection_changed">
                         <ListBox.Resources>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"                       Color="#D6EAE8"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"                   Color="#12413C"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"      Color="#EDF4F3"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}"  Color="#12413C"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#D6EAE8"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#12413C"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#EDF4F3"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#12413C"/>
                         </ListBox.Resources>
+
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Padding"                    Value="8,6"/>
@@ -1692,7 +1726,8 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                         <ControlTemplate TargetType="ListBoxItem">
                                             <Border x:Name="ItemBorder"
                                                     Background="{TemplateBinding Background}"
-                                                    BorderThickness="0" CornerRadius="4"
+                                                    BorderThickness="0"
+                                                    CornerRadius="4"
                                                     Padding="{TemplateBinding Padding}">
                                                 <ContentPresenter/>
                                             </Border>
@@ -1701,9 +1736,9 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                                     <Setter TargetName="ItemBorder" Property="Background" Value="#EDF4F3"/>
                                                 </Trigger>
                                                 <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background"      Value="#D6EAE8"/>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="#D6EAE8"/>
                                                     <Setter TargetName="ItemBorder" Property="BorderThickness" Value="0,0,0,2"/>
-                                                    <Setter TargetName="ItemBorder" Property="BorderBrush"     Value="{StaticResource ForestBrush}"/>
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource ForestBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -1711,10 +1746,12 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                 </Setter>
                             </Style>
                         </ListBox.ItemContainerStyle>
+
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding FamilyName}"
-                                           FontSize="12" FontWeight="Medium"
+                                           FontSize="12"
+                                           FontWeight="Medium"
                                            Foreground="#1F2937"
                                            TextTrimming="CharacterEllipsis"/>
                             </DataTemplate>
@@ -1723,21 +1760,23 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="1" Width="5"
+            <GridSplitter Grid.Column="1"
+                          Width="5"
                           Background="{StaticResource SandBrush}"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
 
-            <!-- ============ RIGHT: SETTINGS + TRAY + ACTIONS ============ -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>   <!-- selected family + settings -->
-                    <RowDefinition Height="*"/>      <!-- TO ADD grid -->
-                    <RowDefinition Height="Auto"/>   <!-- result strip -->
-                    <RowDefinition Height="Auto"/>   <!-- action button -->
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- ===== SELECTED FAMILY + SETTINGS ===== -->
-                <Border Grid.Row="0" BorderBrush="{StaticResource ForestBrush}" BorderThickness="2"
+                <Border Grid.Row="0"
+                        BorderBrush="{StaticResource ForestBrush}"
+                        BorderThickness="2"
                         Margin="0,0,0,6">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -1745,9 +1784,14 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" Background="{StaticResource ForestBrush}" Padding="10">
-                            <TextBlock Text="SELECTED FAMILY" Foreground="White"
-                                       FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                        <Border Grid.Row="0"
+                                Background="{StaticResource ForestBrush}"
+                                Padding="10">
+                            <TextBlock Text="SELECTED FAMILY"
+                                       Foreground="White"
+                                       FontWeight="Bold"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
                         </Border>
 
                         <Grid Grid.Row="1" Margin="12,10,12,12">
@@ -1756,24 +1800,27 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <!-- LEFT: name + category -->
-                            <StackPanel Grid.Column="0" Orientation="Vertical"
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Vertical"
                                         VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedFamilyName}"
-                                           FontSize="13" FontWeight="SemiBold"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
                                            Foreground="{StaticResource ForestBrush}"
                                            TextTrimming="CharacterEllipsis"/>
-                                <Border Background="#E8F0EF" CornerRadius="3"
-                                        Padding="6,2" Margin="0,4,0,0"
+                                <Border Background="#E8F0EF"
+                                        CornerRadius="3"
+                                        Padding="6,2"
+                                        Margin="0,4,0,0"
                                         HorizontalAlignment="Left"
                                         Visibility="{Binding HasCategoryBadge, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding SelectedFamilyCategory}"
-                                               FontSize="10" FontWeight="SemiBold"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
                                                Foreground="{StaticResource ForestBrush}"/>
                                 </Border>
                             </StackPanel>
 
-                            <!-- RIGHT: settings (multipoint, stepper, connector type, overwrite) -->
                             <Grid Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -1787,20 +1834,24 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Row 0: Multi-point | Stepper -->
-                                <StackPanel Grid.Row="0" Grid.Column="0"
-                                            Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Grid.Row="0"
+                                            Grid.Column="0"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
                                     <TextBlock Text="Multi-point"
                                                Style="{StaticResource SettingsLabel}"/>
                                     <ToggleButton x:Name="toggle_multipoint"
-                                                  Width="46" Height="24"
+                                                  Width="46"
+                                                  Height="24"
                                                   Cursor="Hand"
                                                   IsChecked="{Binding IsMultiPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                   Template="{StaticResource ToggleSwitchTemplate}"/>
                                 </StackPanel>
 
-                                <StackPanel Grid.Row="0" Grid.Column="1"
-                                            Orientation="Horizontal" VerticalAlignment="Center"
+                                <StackPanel Grid.Row="0"
+                                            Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
                                             Margin="20,0,0,0"
                                             IsEnabled="{Binding IsStepperEnabled}">
                                     <TextBlock Text="Connections:"
@@ -1809,7 +1860,8 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                             Content="-"
                                             Command="{Binding conn_dec_command}"/>
                                     <TextBlock Text="{Binding ConnectionCountText}"
-                                               FontSize="14" FontWeight="Bold"
+                                               FontSize="14"
+                                               FontWeight="Bold"
                                                Foreground="{StaticResource ForestBrush}"
                                                VerticalAlignment="Center"
                                                TextAlignment="Center"
@@ -1819,12 +1871,14 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                             Command="{Binding conn_inc_command}"/>
                                 </StackPanel>
 
-                                <!-- Row 2: Connector type selector (NEW) -->
-                                <TextBlock Grid.Row="2" Grid.Column="0"
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
                                            Text="Connector type"
                                            Style="{StaticResource SettingsLabel}"
                                            VerticalAlignment="Center"/>
-                                <ComboBox Grid.Row="2" Grid.Column="1"
+
+                                <ComboBox Grid.Row="2"
+                                          Grid.Column="1"
                                           x:Name="cmb_connector_type"
                                           Style="{StaticResource FlatComboBox}"
                                           DisplayMemberPath="Label"
@@ -1832,14 +1886,17 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                           Margin="0,0,0,0"
                                           SelectionChanged="connector_type_changed"/>
 
-                                <!-- Row 4: Overwrite values toggle (NEW) -->
-                                <TextBlock Grid.Row="4" Grid.Column="0"
+                                <TextBlock Grid.Row="4"
+                                           Grid.Column="0"
                                            Text="Overwrite existing values"
                                            Style="{StaticResource SettingsLabel}"
                                            VerticalAlignment="Center"/>
-                                <ToggleButton Grid.Row="4" Grid.Column="1"
+
+                                <ToggleButton Grid.Row="4"
+                                              Grid.Column="1"
                                               x:Name="toggle_overwrite"
-                                              Width="46" Height="24"
+                                              Width="46"
+                                              Height="24"
                                               HorizontalAlignment="Left"
                                               Cursor="Hand"
                                               IsChecked="{Binding OverwriteParamValues, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -1849,28 +1906,37 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                     </Grid>
                 </Border>
 
-                <!-- ===== TO ADD GRID ===== -->
-                <Border Grid.Row="1" BorderBrush="{StaticResource ForestBrush}" BorderThickness="2">
+                <Border Grid.Row="1"
+                        BorderBrush="{StaticResource ForestBrush}"
+                        BorderThickness="2">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="40"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" Background="{StaticResource ForestBrush}" Padding="10">
+                        <Border Grid.Row="0"
+                                Background="{StaticResource ForestBrush}"
+                                Padding="10">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="TO ADD" Foreground="White"
-                                           FontWeight="Bold" FontSize="12"
+                                <TextBlock Text="TO ADD"
+                                           Foreground="White"
+                                           FontWeight="Bold"
+                                           FontSize="12"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding ActiveCountText}"
-                                           Foreground="White" FontSize="11"
-                                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                           Foreground="White"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           Margin="10,0,0,0"/>
                             </StackPanel>
                         </Border>
 
-                        <DataGrid Grid.Row="1" x:Name="sp_grid"
+                        <DataGrid Grid.Row="1"
+                                  x:Name="sp_grid"
                                   AutoGenerateColumns="False"
-                                  CanUserAddRows="False" CanUserDeleteRows="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
                                   SelectionMode="Single"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
@@ -1890,28 +1956,26 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                   VerticalScrollBarVisibility="Auto">
 
                             <DataGrid.Resources>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"                       Color="#D6EAE8"/>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"                   Color="#12413C"/>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"      Color="#EDF4F3"/>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}"  Color="#12413C"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#D6EAE8"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#12413C"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#EDF4F3"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#12413C"/>
                             </DataGrid.Resources>
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
-                                    <Setter Property="FontSize"        Value="12"/>
-                                    <Setter Property="Foreground"      Value="#1F2937"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="Foreground" Value="#1F2937"/>
                                     <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Opacity"         Value="{Binding RowOpacity}"/>
+                                    <Setter Property="Opacity" Value="{Binding RowOpacity}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding NotFound}" Value="True">
                                             <Setter Property="Foreground" Value="#9CA3AF"/>
-                                            <Setter Property="FontStyle"  Value="Italic"/>
-                                            <Setter Property="ToolTip"
-                                                    Value="Not found in shared parameter file"/>
+                                            <Setter Property="FontStyle" Value="Italic"/>
+                                            <Setter Property="ToolTip" Value="Not found in shared parameter file"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding IsExcluded}" Value="True">
-                                            <Setter Property="ToolTip"
-                                                    Value="Excluded from this run - will not be added"/>
+                                            <Setter Property="ToolTip" Value="Excluded from this run - will not be added"/>
                                         </DataTrigger>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter Property="Background" Value="#EDF4F3"/>
@@ -1922,12 +1986,12 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
 
                             <DataGrid.CellStyle>
                                 <Style TargetType="DataGridCell">
-                                    <Setter Property="BorderThickness"  Value="0"/>
-                                    <Setter Property="Padding"          Value="0"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
                                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                     <Style.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background"  Value="Transparent"/>
+                                            <Setter Property="Background" Value="Transparent"/>
                                             <Setter Property="BorderBrush" Value="Transparent"/>
                                         </Trigger>
                                     </Style.Triggers>
@@ -1938,7 +2002,6 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ColHeader}"/>
                             </DataGrid.ColumnHeaderStyle>
 
-                            <!-- ===== Group style: collapsible section headers ===== -->
                             <DataGrid.GroupStyle>
                                 <GroupStyle>
                                     <GroupStyle.ContainerStyle>
@@ -1977,7 +2040,6 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                                                             </TextBlock.Text>
                                                                         </TextBlock>
                                                                     </StackPanel>
-                                                                    <!-- Full-area transparent ToggleButton acts as the click target -->
                                                                     <ToggleButton x:Name="expander"
                                                                                   IsChecked="True"
                                                                                   Background="Transparent"
@@ -1993,8 +2055,8 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                                         </StackPanel>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger SourceName="expander" Property="IsChecked" Value="False">
-                                                                <Setter TargetName="items"   Property="Visibility" Value="Collapsed"/>
-                                                                <Setter TargetName="chevron" Property="Text"       Value="&#x25B8;"/>
+                                                                <Setter TargetName="items" Property="Visibility" Value="Collapsed"/>
+                                                                <Setter TargetName="chevron" Property="Text" Value="&#x25B8;"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -2006,9 +2068,9 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                             </DataGrid.GroupStyle>
 
                             <DataGrid.Columns>
-                                <!-- EXCL: row-level exclude checkbox (NEW) -->
-                                <DataGridTemplateColumn Width="68" MinWidth="68"
-                                                       HeaderStyle="{StaticResource ColHeaderCenter}">
+                                <DataGridTemplateColumn Width="68"
+                                                        MinWidth="68"
+                                                        HeaderStyle="{StaticResource ColHeaderCenter}">
                                     <DataGridTemplateColumn.Header>EXCL</DataGridTemplateColumn.Header>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -2020,9 +2082,9 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- TYPE -->
-                                <DataGridTemplateColumn Width="68" MinWidth="68"
-                                                       HeaderStyle="{StaticResource ColHeaderCenter}">
+                                <DataGridTemplateColumn Width="68"
+                                                        MinWidth="68"
+                                                        HeaderStyle="{StaticResource ColHeaderCenter}">
                                     <DataGridTemplateColumn.Header>TYPE</DataGridTemplateColumn.Header>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -2034,12 +2096,11 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- PARAMETER NAME -->
                                 <DataGridTextColumn Header="PARAMETER NAME"
-                                                   Binding="{Binding ParamName}"
-                                                   Width="2*"
-                                                   MinWidth="320"
-                                                   IsReadOnly="True">
+                                                    Binding="{Binding ParamName}"
+                                                    Width="2*"
+                                                    MinWidth="320"
+                                                    IsReadOnly="True">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource CellText}">
                                             <Setter Property="FontWeight" Value="Medium"/>
@@ -2047,12 +2108,11 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
 
-                                <!-- DATA TYPE -->
                                 <DataGridTextColumn Header="DATA TYPE"
-                                                   Binding="{Binding DataType}"
-                                                   Width="1*"
-                                                   MinWidth="200"
-                                                   IsReadOnly="True">
+                                                    Binding="{Binding DataType}"
+                                                    Width="1*"
+                                                    MinWidth="200"
+                                                    IsReadOnly="True">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource CellTextMuted}"/>
                                     </DataGridTextColumn.ElementStyle>
@@ -2062,23 +2122,43 @@ _XAML = u"""<?xml version="1.0" encoding="utf-8"?>
                     </Grid>
                 </Border>
 
-                <!-- ===== INLINE RESULT STRIP ===== -->
-                <Border Grid.Row="2" Margin="0,8,0,0"
-                        Padding="10,6"
+                <Border Grid.Row="2"
+                        Margin="0,8,0,0"
+                        Padding="12"
                         Background="#F8F8F4"
                         BorderBrush="#D9D2BD"
                         BorderThickness="1"
                         Visibility="{Binding ResultVisible, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{Binding ResultText}"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               Foreground="{Binding ResultBrush}"/>
+                    <StackPanel>
+                        <TextBlock Text="{Binding ResultText}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   Foreground="{Binding ResultBrush}"/>
+
+                        <Border Margin="0,8,0,0"
+                                Padding="8"
+                                Background="White"
+                                BorderBrush="#E5E7EB"
+                                BorderThickness="1"
+                                Visibility="{Binding HasResultDetails, Converter={StaticResource BoolToVis}}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          MaxHeight="180">
+                                <TextBlock Text="{Binding ResultDetailsText}"
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           Foreground="#374151"
+                                           TextWrapping="NoWrap"/>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
                 </Border>
 
-                <!-- ===== ACTION BUTTON ===== -->
-                <StackPanel Grid.Row="3" Orientation="Horizontal"
-                            HorizontalAlignment="Right" Margin="0,8,0,0">
+                <StackPanel Grid.Row="3"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,8,0,0">
                     <Button Content="Add Params + Electrical Connector"
                             Style="{StaticResource AccentButton}"
                             Command="{Binding auto_add_command}"
