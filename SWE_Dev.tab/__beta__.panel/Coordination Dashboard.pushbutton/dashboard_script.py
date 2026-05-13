@@ -28,6 +28,7 @@ from System.Collections.ObjectModel import ObservableCollection
 
 from Autodesk.Revit.DB import FilteredElementCollector, ViewSheet
 from pyrevit import revit, forms
+from lib import project_paths
 
 __title__ = 'Dashboard'
 __author__ = 'Evelyn Lutz'
