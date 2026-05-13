@@ -59,6 +59,7 @@ from System.Collections.ObjectModel import ObservableCollection
 from System.ComponentModel import INotifyPropertyChanged, PropertyChangedEventArgs
 from System.Windows.Data import CollectionViewSource, PropertyGroupDescription
 from System.Windows.Input import ICommand
+from Microsoft.Win32 import OpenFileDialog
 
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.DB import (
@@ -330,15 +331,32 @@ def _active_param_list(multipoint, connection_count=1):
 # These remain plain module-level functions. They are called by the ViewModel
 # layer and have zero UI awareness.
 
-def get_project_shared_parameter_file(app):
+def get_project_shared_parameter_file(app, prompt_user=False):
     try:
         sp_file = app.SharedParametersFilename
         if sp_file and os.path.exists(sp_file):
             return sp_file
     except Exception as ex:
         print("WARNING: Could not read SharedParametersFilename: {0}".format(ex))
+
     if os.path.exists(FALLBACK_SP_FILE):
         return FALLBACK_SP_FILE
+
+    if prompt_user:
+        try:
+            dlg = OpenFileDialog()
+            dlg.Title = 'Select Shared Parameter File'
+            dlg.Filter = 'Text files (*.txt)|*.txt'
+            dlg.Multiselect = False
+
+            picked = dlg.ShowDialog()
+            if picked:
+                file_path = dlg.FileName
+                if file_path and os.path.exists(file_path) and file_path.lower().endswith('.txt'):
+                    return file_path
+        except Exception as ex:
+            print("WARNING: Could not show file picker: {0}".format(ex))
+
     return None
 
 
@@ -889,7 +907,7 @@ class MainViewModel(BaseViewModel):
         return result
 
     def _load_sp_file(self):
-        sp_file = get_project_shared_parameter_file(self.app)
+        sp_file = get_project_shared_parameter_file(self.app, prompt_user=False)
         if sp_file:
             self._sp_group_dict, self._sp_param_dict = read_txt_file_combined(sp_file)
             self._status_text = '({0} parameters loaded)'.format(len(self._sp_param_dict))
@@ -1173,7 +1191,7 @@ class MainViewModel(BaseViewModel):
             self._set_result('No family selected.', is_error=True)
             return
 
-        current_sp_file = get_project_shared_parameter_file(self.app)
+        current_sp_file = get_project_shared_parameter_file(self.app, prompt_user=True)
         if not current_sp_file or not os.path.exists(current_sp_file):
             self._set_result('No shared parameter file found.', is_error=True)
             TaskDialog.Show(
