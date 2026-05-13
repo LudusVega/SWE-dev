@@ -99,13 +99,19 @@ CONNECTOR_ASSOCIATION_MAP = [
 ]
 
 AUTO_ADD_PARAMS = [
+    '1_Connection Description [txt]',
     '1_Voltage [V]',
     '1_Phase [Ph]',
     '1_FLA [A]',
     '1_Watt [W]',
+    '1_Horsepower [hp]',
+    '1_MCA [A]',
+    '1_MOP [A]',
     '1_Apparent Load',
+    '1_FLA MFR [A]',
+    '1_Load Classification',
+    '1_MCA Factor [Num]',
     '1_Power Factor',
-    '1_Connection Description [txt]',
 ]
 
 SCHEDULE_PARAMETERS = {
